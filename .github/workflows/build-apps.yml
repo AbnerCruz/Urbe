@@ -38,7 +38,7 @@ jobs:
         run: npx electron-builder --win --x64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows
           path: |
@@ -85,7 +85,7 @@ jobs:
         run: |
           mkdir -p out
           cp native/android/app/build/outputs/apk/release/app-release.apk "out/Urbe-${{ inputs.version }}.apk"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: android
           path: out/*.apk
