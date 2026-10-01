@@ -7,10 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
-  actions: write
-  issues: write
-  pages: write
+  contents: read
 
 concurrency:
   group: sync-from-ecosystem
@@ -19,6 +16,11 @@ concurrency:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+      issues: write
+      pages: write
     env:
       COMPONENT: urbe
       RELEASE_MODE: tag-dispatch
