@@ -11,7 +11,7 @@
 | REQ-002 | §1.2 | F0 | RM-F0-02 — Verificador e gerador de rastreabilidade | [x] | Execução local: `node tools/check-traceability.mjs` retorna 0; teste negativo em `tests/traceability.mjs` (REQ removido → falha). | G0 |
 | REQ-002 | §1.2 | F6 | RM-F6-08 — Relatório final de rastreabilidade | [ ] | `gen-traceability --check`. | G6 |
 | REQ-002 | §1.2 | F7 | RM-F7-28 — Fechar G7: todo OBS com teste e documentação | [ ] | Verificador + revisão. | G7 |
-| REQ-003 | §3.1 | F2 | RM-F2-02 — Harness de teste de produção do monólito | [?] | Cobre boot, abrir vault fixture, criar nota, mundo (`tests/e2e/app-runtime.e2e.mjs`; `node tools/run-e2e.mjs app-runtime`). `[?]`: os E2E ainda não rodam no CI (nenhum workflow instala o Chromium) — enquanto isso, o gate do harness é local; ligar ao CI é pendência a registrar antes de marcar `[x]`. | G2 |
+| REQ-003 | §3.1 | F2 | RM-F2-02 — Harness de teste de produção do monólito | [x] | Cobre boot, abrir vault fixture, criar nota, mundo (`tests/e2e/app-runtime.e2e.mjs`; `node tools/run-e2e.mjs app-runtime`). **No CI:** job `e2e` em `.github/workflows/urbe-checks.yml` (Chromium via `npx playwright install --with-deps chromium`; `node tools/run-e2e.mjs app-runtime zip smoke`), executado no PR e no estado combinado do integrador. Os demais E2E entram no job um a um, depois de provados em Chromium. | G2 |
 | REQ-003 | §3.1 | F2 | RM-F2-19 — `app.js` reduzido a composição/bootstrap | [ ] | Métrica: sem regra de domínio (revisão + lint de imports). | G2 |
 | REQ-004 | §1.2 | F0 | RM-F0-18 — Comando único `npm run check` (sincronização docs×código) | [?] | Falha em qualquer sub-check falha o comando. | G0 |
 | REQ-004 | §1.2 | F6 | RM-F6-09 — Sincronização final docs×código×release | [ ] | CI. | G6 |
@@ -54,8 +54,8 @@
 | REQ-026 | §3.3 | F2 | RM-F2-06 — Ligar controlador de toque canônico | [ ] | `runtime-adapters.mjs` + E2E de gesto (RM-F4-06). | G2 |
 | REQ-026 | §3.3 | F2 | RM-F2-07 — Ligar grafo de ruas canônico | [ ] | `world-system.mjs` + testes de rota com fixtures. | G2 |
 | REQ-026 | §3.3 | F2 | RM-F2-08 — Remover desenho e laço duplicados de `app.js` | [ ] | Paridade visual; `check-debt` cai; testes verdes. | G2 |
-| REQ-027 | §3.3 | F2 | RM-F2-09 — Extrair renderMarkdown para o editor | [ ] | Testes de renderização (tabelas, callouts, math, links, sanitização) + regressão `composition`. | G2 |
-| REQ-027 | §3.3 | F2 | RM-F2-10 — Extrair editor Visual e conversão | [ ] | Round-trip Markdown↔Visual em fixtures; sem ressuscitar nota apagada. | G2 |
+| REQ-027 | §3.3 | F2 | RM-F2-09 — Extrair renderMarkdown para o editor | [x] | Testes de renderização (tabelas, callouts, math, links, sanitização) + regressão `composition`. Feito: `tests/markdown.mjs` (33 casos iguais a um golden gerado do código antigo, sanitização e «autoridade única»), preview no app real em `tests/e2e/app-runtime.e2e.mjs` (roda no CI) e a suíte inteira (`npm run check`, 13/13 E2E). | G2 |
+| REQ-027 | §3.3 | F2 | RM-F2-10 — Extrair editor Visual e conversão | [~] | Round-trip Markdown↔Visual em fixtures; sem ressuscitar nota apagada. | G2 |
 | REQ-027 | §3.3 | F2 | RM-F2-11 — Extrair autocompletar de wikilinks e barra de formatação | [ ] | Testes de sugestão/inserção; E2E. | G2 |
 | REQ-028 | §3.3 | F1 | RM-F1-10 — Contrato de adapters de persistência e testes | [x] | Suíte roda contra mock e contra `vault-fs.js`. | G1 |
 | REQ-028 | §3.3 | F1 | RM-F1-11 — Adapters IDB e FSA extraídos de `FS/Disco/DBK` | [x] | Suíte de contrato + fixtures + `integration-runtime`. | G1 |
@@ -65,7 +65,7 @@
 | REQ-029 | §3.3 | F2 | RM-F2-13 — Eliminar cadeia `estadoDesejado` e `abrirCidade` | [ ] | Fixtures; `check-debt` cai. | G2 |
 | REQ-029 | §3.3 | F2 | RM-F2-14 — Eliminar demais cadeias e duplicadas; `V21_VERSION` | [ ] | `check-debt` = 0 sobrescritas/duplicadas; testes verdes. | G2 |
 | REQ-029 | §3.3 | F2 | RM-F2-19 — `app.js` reduzido a composição/bootstrap | [ ] | Métrica: sem regra de domínio (revisão + lint de imports). | G2 |
-| REQ-030 | §3.3 | F2 | RM-F2-04 — Remover resíduos de UI e gancho `window.URBE` | [ ] | Teste de UI sem referência; grep zero. | G2 |
+| REQ-030 | §3.3 | F2 | RM-F2-04 — Remover resíduos de UI e gancho `window.URBE` | [~] | Teste de UI sem referência; grep zero. | G2 |
 | REQ-030 | §3.3 | F2 | RM-F2-12 — Mundo derivado só da projeção (L3, L4) | [ ] | Fixtures abrem com mesmo resultado; sem marcador de texto. | G2 |
 | REQ-030 | §3.3 | F2 | RM-F2-15 — Remover adapters `legacy.runtime` e `legacy.documents` | [ ] | Testes de produção por consumidor (não existiam). | G2 |
 | REQ-030 | §3.3 | F2 | RM-F2-16 — Extrair hosts `world.custom`, `city.layout`, `world.life.host`, `workspace.storage`; remover wrapper `document.open` | [ ] | Testes de contrato de `world.custom`; `world-life.mjs`, `customize.mjs`. | G2 |
@@ -111,7 +111,7 @@
 | REQ-062 | §9 | F3 | RM-F3-19 — Testes de `main.js` e `preload.js` | [x] | `tests/desktop-main.mjs`, `tests/desktop-preload.mjs`. | G3 |
 | REQ-062 | §9 | F3 | RM-F3-20 — Testes JUnit do plugin Android e SW real | [~] | `app/src/test/...`, `tests/e2e/sw.spec`. | G3 |
 | REQ-063 | §9 | F0 | RM-F0-05 — Runner de testes multiplataforma | [?] | Teste do runner com script falho/passando; roda em Windows (CI matrix) e Linux. | G0 |
-| REQ-064 | §9 | F2 | RM-F2-02 — Harness de teste de produção do monólito | [?] | Cobre boot, abrir vault fixture, criar nota, mundo (`tests/e2e/app-runtime.e2e.mjs`; `node tools/run-e2e.mjs app-runtime`). `[?]`: os E2E ainda não rodam no CI (nenhum workflow instala o Chromium) — enquanto isso, o gate do harness é local; ligar ao CI é pendência a registrar antes de marcar `[x]`. | G2 |
+| REQ-064 | §9 | F2 | RM-F2-02 — Harness de teste de produção do monólito | [x] | Cobre boot, abrir vault fixture, criar nota, mundo (`tests/e2e/app-runtime.e2e.mjs`; `node tools/run-e2e.mjs app-runtime`). **No CI:** job `e2e` em `.github/workflows/urbe-checks.yml` (Chromium via `npx playwright install --with-deps chromium`; `node tools/run-e2e.mjs app-runtime zip smoke`), executado no PR e no estado combinado do integrador. Os demais E2E entram no job um a um, depois de provados em Chromium. | G2 |
 | REQ-064 | §9 | F2 | RM-F2-18 — Eliminar testes dependentes de texto de `app.js` | [ ] | grep de `readFileSync('src/app.js')` em `tests/` = 0. | G2 |
 | REQ-065 | §10.2 | F0 | RM-F0-06 — Fonte única de versão (`tools/version.mjs`) | [x] | `tests/version.mjs` (drift injetado falha); `consistency.mjs` adaptado. | G0 |
 | REQ-066 | §10.2 | F0 | RM-F0-14 — Separar integração e publicação (release por tag) | [?] | Dry-run em branch de teste: push em `main` não publica; tag publica em repositório de teste. | G0 |
@@ -193,4 +193,4 @@
 ## Cobertura
 
 - REQ IMPLEMENTAR: 101; com item no ROADMAP: 101.
-- Itens no ROADMAP: 146; concluídos `[x]`: 41.
+- Itens no ROADMAP: 146; concluídos `[x]`: 43.

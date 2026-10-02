@@ -5,6 +5,44 @@
 
 ---
 
+### 2026-10-02 — Claude — DEC-0024-B aplicada: programa de migração do Urbe para C# (UC-n), planejamento
+- **Estado:** o proprietário decidiu a **alternativa B** (reescrita completa em C#, troca do produto só em paridade total) pelo portal (Ecosystem DEC-0024, Issue #45, registro `docs/governance/responses/DEC-0024.md`). Esta entrada **não implementa nada**: aplica as consequências nos documentos.
+- **Feito:** Ecosystem ADR-0016 → Aceito; Urbe **ADR-0010** (referência qualificada ao Ecosystem ADR-0016); programa em `docs/csharp/` (README + ROADMAP `UC-1..UC-32`, fases M0–M5, gates G-C0–G-C5); documentos do Ecosystem que diziam «Urbe permanece em JavaScript / reescrita proibida» corrigidos.
+- **Não decidido (cada um tem item e decisão própria):** pilha de UI/hosts (UC-5), transição das instalações e canais (UC-6), modelo de plugins em C# (UC-20), o corte (UC-31). A pilha do exemplo (Blazor etc.) NÃO foi decidida.
+- **Nova decisão para o proprietário:** Ecosystem **DEC-0025** (não bloqueante): o que fazer com os itens estruturais abertos do programa 2.0 em JavaScript. Padrão conservador enquanto pendente: nenhum item estrutural novo do 2.0; correções e preparação de paridade seguem.
+- **Regras:** dados do usuário não mudam de formato; paridade provada por fixtures/goldens/E2E independentes de linguagem; zona crítica da política precisa cobrir o código novo (UC-7) antes do primeiro PR de código C#.
+- **Próximos passos:** M0 (UC-1 matriz de paridade, UC-2 suíte de aceite, UC-3 contrato do vault, UC-4 dependências, UC-7 política), em PRs próprios.
+
+### 2026-10-02 — Claude — correção: código inline com wikilink (achado de RM-F2-09/10), U-R1 no monorepo Ecosystem
+- **Estado:** corrigido em PR próprio (NN-013: refatoração e correção separadas). RM-F2-10 segue `[~]`.
+- **Bug:** `` `[[x]]` `` renderizava com U+0002 dentro do `<code>` (o `inlineMarkdown` v22 trocava wikilinks antes do código).
+- **Correção** (`src/editor/markdown.js`): o código sai primeiro e é opaco; marcadores aninhados voltam em mais de uma passada; `alt` de imagem recebe o código como texto. Efeito colateral deliberado: código dentro do rótulo de um link/ênfase agora renderiza como `<code>` (antes ficava com crases literais).
+- **Prova:** o golden de `markdown.js` mudou em exatamente 2 de 33 casos, os dois com o marcador vazado; 7 casos de regressão novos (40 no total) e asserção de que nenhuma saída contém U+0001..U+0003; 4 entradas do golden do serializador atualizadas. `npm run check` e 14 E2E verdes.
+- **CHANGELOG:** a entrada vai na próxima release (o arquivo só lista versões publicadas).
+
+### 2026-10-02 — Claude — RM-F2-10 `[~]` (1ª fatia: serializador Visual → Markdown), U-R1 no monorepo Ecosystem
+- **Estado:** RM-F2-09 `[x]` (PR #54). RM-F2-10 em andamento: a parte pura saiu; o editor Visual com estado ainda não.
+- **Feito:** `src/editor/visual.js` (`UrbeVisual`, serviço `editor.visual`) com `markdownFromVisual` e as duas camadas que o embrulhavam (U+200B/`#` vazio e `UrbeMathEditor`); `app.js` ficou com um adaptador de uma linha que injeta o frontmatter (−113 linhas; teto rebaixado). Golden de 110 casos gerado em Chromium com o código antigo; `tests/e2e/app-runtime-visual.e2e.mjs` (nome casa com o filtro `app-runtime` do CI) + caminho real do editor; mutação da normalização derrubou o teste. Contrato `docs/v2/contracts/editor-visual.md`. `tests/ai-agent.mjs` e `tests/search-editor.mjs` passaram a ler o serializador em `visual.js`.
+- **Achado (bug pré-existente, não corrigido aqui por NN-013):** código inline com wikilink (`` `[[x]]` ``) renderiza com caracteres de controle `\x02`: o `inlineMarkdown` com sanitização (v22) troca wikilinks antes do código; a versão base tratava o código primeiro. Está travado no golden de `markdown.js` (2 casos) e entra como correção em item/PR próprio, atualizando o golden de propósito.
+- **Falta de RM-F2-10:** `setEditorViewMode`, sincronização Visual↔fonte, `contenteditable`/seleção, estado vazio e «sem ressuscitar nota apagada»: dependem de closures do app.js e pedem validação em aparelho (NN-017).
+- **Próximos passos:** corrigir o bug do código inline; depois RM-F2-05..08 (renderer/laço de desenho; fecham o `#mini` e RM-F2-04).
+
+### 2026-10-02 — Claude — RM-F2-09 `[x]` (renderMarkdown fora do app.js), U-R1 no monorepo Ecosystem
+- **Estado:** RM-F2-09 concluído; RM-F2-04 segue `[~]` (falta só o minimapa legado).
+- **Feito:** `src/editor/markdown.js` (global `UrbeMarkdown` + serviço `editor.markdown`): render de blocos, inline, frontmatter, tabelas, callouts, `safeUrl`, cabeçalho vazio e a camada de matemática — copiados do `app.js`, que agora só desestrutura o global no topo. `app.js` −201 linhas (5199 → 4998) (teto de dívida rebaixado). Contrato em `docs/v2/contracts/editor-markdown.md`.
+- **Prova de equivalência:** `tests/fixtures/markdown-golden.json` foi gerado do código antigo (33 casos) e `tests/markdown.mjs` exige saídas idênticas; o preview no app real está em `tests/e2e/app-runtime.e2e.mjs` (mutação da sanitização derruba o teste). `npm run check` 59/59 e os 13 E2E passam.
+- **Achado:** a exceção `pages/engine → app.js` era falso positivo (a palavra «URBE» num texto casava com o global `URBE`, que saiu em RM-F2-04); removida de `BOUNDARY-EXCEPTIONS.md`. O nome do serviço ficou `editor.markdown` (o roadmap dizia `editor.surface`).
+- **Pendências:** `markdownFromVisual` e o editor Visual ainda em `app.js` (RM-F2-10/11); nada para o proprietário.
+- **Próximos passos:** RM-F2-10, depois RM-F2-05/06/07/08 (renderer/laço de desenho; removem o `#mini`).
+
+### 2026-10-02 — Claude — RM-F2-04 `[~]` (L11 feito; L10 feito exceto o minimapa), U-R1 no monorepo Ecosystem
+- **Estado:** RM-F2-02 `[x]` (E2E no CI, PR #47). RM-F2-04 em andamento: `window.URBE` removido e resíduos de UI (L10) saíram, menos o minimapa legado `#mini` (depende do laço de desenho: RM-F2-05/08).
+- **Feito:** `app.js` −61 linhas (teto de dívida rebaixado); `index.html`/CSS sem rodapé do Explorador, botão de importar arquivos e diálogo antigo de Vault/cidade; serviço `diagnostics.world` no lugar do gancho global (3 E2E migrados); `tests/legacy-ui-residue.mjs` (grep zero); LEGACY-MAP L10/L11 atualizado.
+- **Achado:** o LEGACY-MAP dizia que `window.URBE` não tinha consumidor; tinha (`URBE.mundo` em 3 E2E). Corrigido no mapa.
+- **Mantido de propósito:** `vaultFolderIn`/`vaultFilesIn` (fallback de seleção de pasta/arquivos) e `fromGlyph` — são funcionais.
+- **Verificação:** `npm run check` (58 testes) e E2E `app-runtime zip smoke stable-ids layout identity lifecycle` (7/7) no Chromium real.
+- **Próximos passos:** RM-F2-09 (renderMarkdown para o editor, remove a exceção `pages/engine → app.js`); depois RM-F2-05/06/07/08.
+
 ### 2026-10-02 — Claude — RM-F2-01 `[x]` e RM-F2-02 `[?]` (U-R1, monorepo Ecosystem)
 - **Estado:** RM-F2-01 concluído (relatório + script + teste). RM-F2-02 implementado e verde localmente; `[?]` porque os E2E não rodam no CI (nenhum workflow instala o Chromium).
 - **Feito:** `tools/hotspots.mjs`, `docs/v2/discovery/HOTSPOTS.md` (métricas geradas + decisão por arquivo: nenhum dos 7 é extraído agora), `tests/hotspots.mjs`; `tests/e2e/app-runtime.mjs` (harness) e `app-runtime.e2e.mjs` (boot, fixture, criar nota, mundo, recarregar).

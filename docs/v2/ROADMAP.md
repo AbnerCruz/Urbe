@@ -647,14 +647,14 @@ Ordem entre fases: F0 → F1 → F2; F3 pode iniciar após F0 nos itens sem depe
 - **Gate:** G2
 
 ### RM-F2-02 — Harness de teste de produção do monólito
-- **Estado:** [?]
+- **Estado:** [x]
 - **REQ:** REQ-064, REQ-003
 - **SPEC:** §3.1, §9
 - **Fase:** F2
 - **Depende:** RM-F1-02
 - **Implementação:** `tests/app-runtime.mjs`: carrega `index.html` real em jsdom/Playwright e expõe abertura/boot para testes de comportamento; substitui fatiamento por marcadores. **Como feito:** Playwright/Chromium real (já usado pelos E2E), em `tests/e2e/app-runtime.mjs` (módulo auxiliar `startRuntime`/`open`/`createNote`/`world`/`reload`; fica em `tests/e2e/` porque `npm test` roda todo `tests/*.mjs` sem navegador e o CI ainda não instala o Chromium).
 - **Integração:** Usado por todos os itens de extração.
-- **Testes:** Cobre boot, abrir vault fixture, criar nota, mundo (`tests/e2e/app-runtime.e2e.mjs`; `node tools/run-e2e.mjs app-runtime`). `[?]`: os E2E ainda não rodam no CI (nenhum workflow instala o Chromium) — enquanto isso, o gate do harness é local; ligar ao CI é pendência a registrar antes de marcar `[x]`.
+- **Testes:** Cobre boot, abrir vault fixture, criar nota, mundo (`tests/e2e/app-runtime.e2e.mjs`; `node tools/run-e2e.mjs app-runtime`). **No CI:** job `e2e` em `.github/workflows/urbe-checks.yml` (Chromium via `npx playwright install --with-deps chromium`; `node tools/run-e2e.mjs app-runtime zip smoke`), executado no PR e no estado combinado do integrador. Os demais E2E entram no job um a um, depois de provados em Chromium.
 - **Documentação:** TEST-MATRIX §5.
 - **Aceite:** Testes de extração não dependem de texto de `app.js`.
 - **Gate:** G2
@@ -673,7 +673,7 @@ Ordem entre fases: F0 → F1 → F2; F3 pode iniciar após F0 nos itens sem depe
 - **Gate:** G2
 
 ### RM-F2-04 — Remover resíduos de UI e gancho `window.URBE`
-- **Estado:** [ ]
+- **Estado:** [~]
 - **REQ:** REQ-030
 - **SPEC:** §3.3
 - **Fase:** F2
@@ -683,6 +683,7 @@ Ordem entre fases: F0 → F1 → F2; F3 pode iniciar após F0 nos itens sem depe
 - **Testes:** Teste de UI sem referência; grep zero.
 - **Documentação:** LEGACY-MAP L10/L11.
 - **Aceite:** L10 e L11 removidos.
+- **Progresso (2026-10-02):** L11 feito (`window.URBE` fora; resta o serviço `diagnostics.world` para 3 E2E até RM-F2-12). L10 feito, exceto o minimapa legado `#mini`, que depende do laço de desenho (RM-F2-05/08). Teste: `tests/legacy-ui-residue.mjs`. `[~]` até o minimapa sair.
 - **Gate:** G2
 
 ### RM-F2-05 — Ligar renderer canônico (paridade visual)
@@ -738,20 +739,20 @@ Ordem entre fases: F0 → F1 → F2; F3 pode iniciar após F0 nos itens sem depe
 - **Gate:** G2
 
 ### RM-F2-09 — Extrair renderMarkdown para o editor
-- **Estado:** [ ]
+- **Estado:** [x]
 - **REQ:** REQ-027
 - **SPEC:** §3.3
 - **Fase:** F2
 - **Depende:** RM-F2-02
 - **Implementação:** `src/editor/markdown.js` (render, sanitização `v22Url`); `app.js` consome.
-- **Integração:** Serviço `editor.surface`.
-- **Testes:** Testes de renderização (tabelas, callouts, math, links, sanitização) + regressão `composition`.
-- **Documentação:** contracts.
+- **Integração:** Serviço `editor.markdown` (nome ajustado: `editor.surface` descreveria a superfície de edição inteira, que é o escopo de RM-F2-10/11) e global `UrbeMarkdown`; `app.js` consome. Efeito colateral: a exceção `pages/engine → app.js` de `BOUNDARY-EXCEPTIONS.md` era um falso positivo (casava a palavra «URBE» num texto com o global `URBE`, removido em RM-F2-04) e foi removida.
+- **Testes:** Testes de renderização (tabelas, callouts, math, links, sanitização) + regressão `composition`. Feito: `tests/markdown.mjs` (33 casos iguais a um golden gerado do código antigo, sanitização e «autoridade única»), preview no app real em `tests/e2e/app-runtime.e2e.mjs` (roda no CI) e a suíte inteira (`npm run check`, 13/13 E2E).
+- **Documentação:** `docs/v2/contracts/editor-markdown.md`.
 - **Aceite:** `renderMarkdown` fora de `app.js`.
 - **Gate:** G2
 
 ### RM-F2-10 — Extrair editor Visual e conversão
-- **Estado:** [ ]
+- **Estado:** [~]
 - **REQ:** REQ-027
 - **SPEC:** §3.3
 - **Fase:** F2
@@ -759,8 +760,9 @@ Ordem entre fases: F0 → F1 → F2; F3 pode iniciar após F0 nos itens sem depe
 - **Implementação:** `src/editor/visual.js` (`markdownFromVisual`, contenteditable, `setEditorViewMode`).
 - **Integração:** `editor-persistence` ajustado.
 - **Testes:** Round-trip Markdown↔Visual em fixtures; sem ressuscitar nota apagada.
-- **Documentação:** —
+- **Documentação:** `docs/v2/contracts/editor-visual.md`.
 - **Aceite:** Visual fora de `app.js`.
+- **Progresso (2026-10-02):** 1ª fatia feita — `markdownFromVisual` (e as duas camadas que o embrulhavam: normalização U+200B/`#` vazio e matemática) saiu para `src/editor/visual.js` (`UrbeVisual`, serviço `editor.visual`); `app.js` ficou com um adaptador que injeta o frontmatter. Golden de 110 casos gerado em Chromium com o código antigo (`tests/e2e/app-runtime-visual.e2e.mjs`, roda no CI pelo filtro `app-runtime`) + caminho real do editor. **Falta (por isso `[~]`):** `setEditorViewMode`, sincronização Visual↔fonte (`syncVisualToMarkdown` e suas camadas), `contenteditable`/seleção, estado vazio e o teste «sem ressuscitar nota apagada». Essa parte depende de closures do `app.js` e de estado do editor; requer validação em aparelho (NN-017) e um desenho do contrato de host antes de mover.
 - **Gate:** G2
 
 ### RM-F2-11 — Extrair autocompletar de wikilinks e barra de formatação

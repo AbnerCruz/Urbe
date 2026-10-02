@@ -1226,9 +1226,7 @@
         "src/core/artifacts.js",
         "src/math/core.js"
       ],
-      "uses": [
-        "src/app.js"
-      ],
+      "uses": [],
       "platforms": [
         "web",
         "electron",
@@ -1426,16 +1424,65 @@
       ]
     },
     {
+      "name": "editor/markdown",
+      "file": "src/editor/markdown.js",
+      "layer": "feature",
+      "phase": "feature",
+      "provides": {
+        "globals": [
+          "UrbeMarkdown"
+        ],
+        "services": [
+          "editor.markdown"
+        ]
+      },
+      "requires": [
+        "src/core/core.js"
+      ],
+      "uses": [
+        "src/math/core.js"
+      ],
+      "platforms": [
+        "web",
+        "electron",
+        "android"
+      ]
+    },
+    {
+      "name": "editor/visual",
+      "file": "src/editor/visual.js",
+      "layer": "feature",
+      "phase": "feature",
+      "provides": {
+        "globals": [
+          "UrbeVisual"
+        ],
+        "services": [
+          "editor.visual"
+        ]
+      },
+      "requires": [
+        "src/core/core.js"
+      ],
+      "uses": [
+        "src/math/editor.js"
+      ],
+      "platforms": [
+        "web",
+        "electron",
+        "android"
+      ]
+    },
+    {
       "name": "app",
       "file": "src/app.js",
       "layer": "app",
       "phase": "app",
       "provides": {
-        "globals": [
-          "URBE"
-        ],
+        "globals": [],
         "services": [
           "city.layout",
+          "diagnostics.world",
           "legacy.documents",
           "legacy.runtime",
           "workspace.storage",
@@ -1469,7 +1516,9 @@
         "src/world/stable-ids.js",
         "src/world/layout-guard.js",
         "src/persistence/export-manifest.js",
-        "src/persistence/multi-city.js"
+        "src/persistence/multi-city.js",
+        "src/editor/markdown.js",
+        "src/editor/visual.js"
       ],
       "uses": [
         "src/pages/studio.js",

@@ -1,6 +1,8 @@
 
 (()=>{
 "use strict";
+/* Markdown do editor: src/editor/markdown.js (RM-F2-09). Declarado no topo para não cair em TDZ. */
+const {escapeHTML,inlineMarkdown,splitFrontmatter,render:renderMarkdown}=window.UrbeMarkdown;
 /* Sprites das casas: vêm do atlas de pixel-art (src/world/pixel-art.js). As imagens
    antigas embutidas aqui (grama, água, ruas, árvores e casas em PNG, ~150 KB) saíram na 1.0:
    chão, ruas, árvores e construções já são desenhados pelo atlas. */
@@ -667,264 +669,11 @@ function commitWikiSuggestion(b){
 }
 
 
-function escapeHTML(s){
-  return String(s).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch]));
-}
-function inlineMarkdown(s){
-  /* trechos de código saem antes: dentro deles, [[...]], ** e _ são texto */
-  const codigos=[];
-  let x=escapeHTML(s).replace(/`([^`\n]+)`/g,(m,c)=>{codigos.push(c);return `\u0002${codigos.length-1}\u0003`});
 
-  // Wiki links are rendered as internal-note pills.
-  x=x.replace(/\[\[([^\]|#]+)(?:\|([^\]]+))?\]\]/g,(m,target,label)=>{
-    const name=(label||target).trim();
-    return `<span class="wikilink" data-note-name="${escapeHTML(target.trim())}">${escapeHTML(name)}</span>`;
-  });
-
-  // Images before ordinary links.
-  x=x.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g,'<img src="$2" alt="$1">');
-  x=x.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
-
-  x=x.replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>');
-  x=x.replace(/__([^_\n]+)__/g,'<strong>$1</strong>');
-  x=x.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g,'<em>$1</em>');
-  x=x.replace(/(?<!_)_([^_\n]+)_(?!_)/g,'<em>$1</em>');
-  x=x.replace(/~~([^~\n]+)~~/g,'<del>$1</del>');
-  return x.replace(/\u0002(\d+)\u0003/g,(m,i)=>`<code>${codigos[+i]}</code>`);
-}
-function splitFrontmatter(md){
-  const src=String(md||"").replace(/\r\n?/g,"\n");
-  if(!src.startsWith("---\n"))return {raw:"",body:src,fields:[]};
-  const end=src.indexOf("\n---",4);
-  if(end<0)return {raw:"",body:src,fields:[]};
-  const raw=src.slice(0,end+4);
-  const body=src.slice(end+4).replace(/^\n+/,"");
-  const lines=raw.split("\n").slice(1,-1);
-  const fields=[];let current=null;
-  for(const line of lines){
-    const m=line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
-    if(m){current={key:m[1],value:m[2]||""};fields.push(current);continue}
-    const li=line.match(/^\s*-\s*(.+)$/);
-    if(li&&current)current.value+=(current.value?", ":"")+li[1];
-  }
-  return {raw,body,fields};
-}
-function renderFrontmatter(fields){
-  if(!fields.length)return "";
-  const chipKeys=new Set(["tags","tag","aliases","alias"]);
-  const valueHTML=f=>{
-    const raw=String(f.value||"").trim();
-    if(!chipKeys.has(String(f.key).toLowerCase()))return inlineMarkdown(raw||"—");
-    const clean=raw.replace(/^\[|\]$/g,"");
-    const values=clean.split(",").map(x=>x.trim().replace(/^['"]|['"]$/g,"")).filter(Boolean);
-    if(!values.length)return "—";
-    return values.map(v=>`<span class="frontmatterChip">${escapeHTML(v)}</span>`).join("");
-  };
-  return `<section class="frontmatterCard" contenteditable="false" data-frontmatter-card="1">${fields.map(f=>`<div class="frontmatterRow"><span class="frontmatterKey">${escapeHTML(f.key)}</span><span class="frontmatterValue">${valueHTML(f)}</span></div>`).join("")}</section>`;
-}
-/* Markdown → HTML do editor Visual. Tudo o que é desenhado aqui volta igual em
-   markdownFromVisual: tabelas (com alinhamento), citações de várias linhas, callouts
-   (> [!tipo] Título), listas aninhadas, tarefas, código com linguagem e links com rótulo. */
-const MD_CALLOUTS={note:"Nota",info:"Informação",tip:"Dica",success:"Pronto",question:"Pergunta",warning:"Atenção",danger:"Perigo",bug:"Erro",example:"Exemplo",quote:"Citação",abstract:"Resumo",todo:"A fazer"};
-function mdTableCells(line){
-  let t=line.trim();if(t.startsWith("|"))t=t.slice(1);if(t.endsWith("|")&&!t.endsWith("\\|"))t=t.slice(0,-1);
-  const cells=[];let cur="";for(let i=0;i<t.length;i++){if(t[i]==="\\"&&t[i+1]==="|"){cur+="|";i++;continue}if(t[i]==="|"){cells.push(cur.trim());cur="";continue}cur+=t[i]}cells.push(cur.trim());return cells;
-}
-function mdIsTableSep(line){return /^\s*\|?\s*:?-{1,}:?\s*(\|\s*:?-{1,}:?\s*)*\|?\s*$/.test(line)&&line.includes("-")}
-function renderMarkdown(md){
-  const fm=splitFrontmatter(md);
-  const lines=fm.body.replace(/\r\n?/g,"\n").split("\n");
-  let out=renderFrontmatter(fm.fields), inCode=false, code=[], lang="", stack=[];
-
-  function closeLevel(){const t=stack.pop();out+=`</li></${t.type}>`}
-  function closeList(){while(stack.length)closeLevel()}
-  function item(type,indent,html){
-    while(stack.length&&indent<stack[stack.length-1].indent)closeLevel();
-    if(stack.length&&indent===stack[stack.length-1].indent&&stack[stack.length-1].type!==type)closeLevel();
-    if(!stack.length||indent>stack[stack.length-1].indent){out+=`<${type}>`;stack.push({type,indent})}
-    else out+="</li>";
-    out+=html;
-  }
-  function flushCode(){
-    if(inCode){
-      out+=`<pre${lang?` data-lang="${escapeHTML(lang)}"`:""}><code>${escapeHTML(code.join("\n"))}</code></pre>`;
-      code=[];inCode=false;lang="";
-    }
-  }
-  function indentOf(l){return l.match(/^[ \t]*/)[0].replace(/\t/g,"    ").length}
-
-  for(let i=0;i<lines.length;i++){
-    const line=lines[i];
-    let m;
-
-    if((m=line.match(/^```\s*([\w+#.-]*)\s*$/))||/^```/.test(line)){
-      if(inCode) flushCode();
-      else {closeList();inCode=true;code=[];lang=m?m[1]:""}
-      continue;
-    }
-    if(inCode){code.push(line);continue}
-
-    if(!line.trim()){closeList();continue}
-
-    if((m=line.match(/^(#{1,6})\s+(.+)$/))){
-      closeList();
-      const n=m[1].length;
-      out+=`<h${n}>${inlineMarkdown(m[2])}</h${n}>`;
-      continue;
-    }
-    if(/^ {0,3}([-*_])(?:\s*\1){2,}\s*$/.test(line)){
-      closeList();out+="<hr>";continue;
-    }
-    /* tabela: linha com | seguida da linha separadora */
-    if(line.includes("|")&&i+1<lines.length&&mdIsTableSep(lines[i+1])){
-      closeList();
-      const head=mdTableCells(line),aligns=mdTableCells(lines[i+1]).map(c=>/^:-+:$/.test(c)?"center":/-:$/.test(c)?"right":/^:-/.test(c)?"left":"");
-      const td=(tag,c,k)=>`<${tag}${aligns[k]?` style="text-align:${aligns[k]}"`:""}>${inlineMarkdown(c)||"<br>"}</${tag}>`;
-      let html=`<table data-md-table="1" data-align="${aligns.join(",")}"><thead><tr>${head.map((c,k)=>td("th",c,k)).join("")}</tr></thead><tbody>`;
-      i+=2;
-      while(i<lines.length&&lines[i].trim()&&lines[i].includes("|")){const cells=mdTableCells(lines[i]);html+=`<tr>${head.map((_,k)=>td("td",cells[k]||"",k)).join("")}</tr>`;i++}
-      i--;out+=html+"</tbody></table>";
-      continue;
-    }
-    /* citação: linhas seguidas com > formam um bloco só; > [!tipo] Título vira um callout */
-    if(/^>\s?/.test(line)){
-      closeList();
-      const grupo=[];while(i<lines.length&&/^>\s?/.test(lines[i])){grupo.push(lines[i].replace(/^>\s?/,""));i++}i--;
-      const c=grupo[0].match(/^\[!(\w+)\][+-]?\s*(.*)$/);
-      if(c){
-        const tipo=c[1].toLowerCase(),titulo=c[2]||"";
-        out+=`<div class="callout callout-${escapeHTML(tipo)}" data-callout="${escapeHTML(tipo)}"><div class="callout-title" data-default="${escapeHTML(MD_CALLOUTS[tipo]||tipo)}">${inlineMarkdown(titulo)||"<br>"}</div><div class="callout-body">${grupo.slice(1).map(inlineMarkdown).join("<br>")||"<br>"}</div></div>`;
-      }else out+=`<blockquote>${grupo.map(inlineMarkdown).join("<br>")}</blockquote>`;
-      continue;
-    }
-    if((m=line.match(/^([ \t]*)[-*+]\s+\[([ xX])\]\s+(.*)$/))){
-      const checked=m[2].toLowerCase()==="x"?" checked":"";
-      item("ul",indentOf(line),`<li class="task"><input type="checkbox"${checked}>${inlineMarkdown(m[3])}`);
-      continue;
-    }
-    if((m=line.match(/^([ \t]*)[-*+]\s+(.+)$/))){
-      item("ul",indentOf(line),`<li>${inlineMarkdown(m[2])}`);
-      continue;
-    }
-    if((m=line.match(/^([ \t]*)(\d+)[.)]\s+(.+)$/))){
-      item("ol",indentOf(line),`<li>${inlineMarkdown(m[3])}`);
-      continue;
-    }
-
-    closeList();
-    out+=`<p>${inlineMarkdown(line)}</p>`;
-  }
-  closeList();
-  flushCode();
-  return out||'<p><br></p>';
-}
 
 let visualSyncLock=false;
 
-function markdownFromVisual(root){
-  const out=[];
-
-  function textInline(node){
-    if(node.nodeType===Node.TEXT_NODE)return node.nodeValue;
-    if(node.nodeType!==Node.ELEMENT_NODE)return "";
-    const el=node, tag=el.tagName.toLowerCase();
-    const inner=[...el.childNodes].map(textInline).join("");
-
-    if(tag==="strong"||tag==="b")return `**${inner}**`;
-    if(tag==="em"||tag==="i")return `_${inner}_`;
-    if(tag==="del"||tag==="s")return `~~${inner}~~`;
-    if(tag==="code" && el.parentElement?.tagName.toLowerCase()!=="pre")return `\`${inner}\``;
-    if(tag==="a")return `[${inner}](${el.getAttribute("href")||""})`;
-    if(tag==="img")return `![${el.getAttribute("alt")||""}](${el.getAttribute("src")||""})`;
-    if(el.classList.contains("wikilink")){
-      const alvo=el.dataset.noteName||inner,rotulo=inner.trim();
-      return rotulo&&rotulo!==alvo?`[[${alvo}|${rotulo}]]`:`[[${alvo}]]`;
-    }
-    if(tag==="ul"||tag==="ol"||tag==="input")return "";
-    if(tag==="br")return "\n";
-    return inner;
-  }
-
-  function block(el){
-    if(el.nodeType===Node.TEXT_NODE){
-      const t=el.nodeValue.trim();
-      if(t)out.push(t);
-      return;
-    }
-    if(el.nodeType!==Node.ELEMENT_NODE)return;
-    const tag=el.tagName.toLowerCase();
-    if(el.hasAttribute("data-frontmatter-card"))return;
-    if(el.dataset&&el.dataset.callout){
-      const titulo=el.querySelector(".callout-title"),corpo=el.querySelector(".callout-body");
-      const t=titulo?textInline(titulo).replace(/\n/g," ").trim():"",b=corpo?textInline(corpo).replace(/\n+$/,""):"";
-      out.push(["> [!"+el.dataset.callout+"]"+(t?" "+t:"")].concat(b.trim()?b.split("\n").map(x=>x?"> "+x:">"):[]).join("\n"));
-      return;
-    }
-
-    if(/^h[1-6]$/.test(tag)){
-      out.push("#".repeat(Number(tag[1]))+" "+textInline(el).trim());
-      return;
-    }
-    // O navegador cria <div> ao sair de uma lista; se ele contém blocos, serializa cada um.
-    if(tag==="div"&&[...el.children].some(c=>/^(P|DIV|H[1-6]|UL|OL|BLOCKQUOTE|PRE|HR|TABLE)$/.test(c.tagName))){
-      [...el.childNodes].forEach(block);
-      return;
-    }
-    if(tag==="p"||tag==="div"){
-      const t=textInline(el).trim();
-      if(t)out.push(t);
-      return;
-    }
-    if(tag==="blockquote"){
-      const linhas=[...el.childNodes].map(n=>/^(P|DIV)$/.test(n.nodeName)?textInline(n)+"\n":textInline(n)).join("").replace(/\n+$/,"").split("\n");
-      out.push(linhas.map(x=>x?"> "+x:">").join("\n"));
-      return;
-    }
-    if(tag==="table"){
-      const rows=[...el.querySelectorAll("tr")];if(!rows.length)return;
-      const cel=c=>textInline(c).replace(/\n/g," ").replace(/\|/g,"\\|").trim();
-      const head=[...rows[0].children].map(cel),al=(el.dataset.align||"").split(",");
-      const sep=head.map((_,k)=>{const a=al[k]||(rows[0].children[k]&&rows[0].children[k].style.textAlign)||"";return a==="center"?":---:":a==="right"?"---:":a==="left"?":---":"---"});
-      const linhas=["| "+head.join(" | ")+" |","| "+sep.join(" | ")+" |"];
-      rows.slice(1).forEach(r=>{const cs=[...r.children].map(cel);while(cs.length<head.length)cs.push("");linhas.push("| "+cs.join(" | ")+" |")});
-      out.push(linhas.join("\n"));
-      return;
-    }
-    if(tag==="pre"){
-      out.push("```"+(el.dataset.lang||"")+"\n"+el.innerText.replace(/\n+$/,"")+"\n```");
-      return;
-    }
-    if(tag==="hr"){
-      out.push("---");
-      return;
-    }
-    if(tag==="ul"||tag==="ol"){
-      /* itens de uma lista ficam em linhas seguidas, sem linha em branco entre eles;
-         sublistas descem até o início do texto do item de cima */
-      const itens=[];
-      (function lista(ul,recuo){
-        const ord=ul.tagName.toLowerCase()==="ol";let n=0;
-        [...ul.children].forEach(li=>{
-          if(li.tagName.toLowerCase()!=="li")return;n++;
-          const checkbox=[...li.children].find(c=>c.tagName==="INPUT"&&c.type==="checkbox");
-          const content=textInline(li).replace(/\n+/g," ").trim();
-          const marca=checkbox?`- [${checkbox.checked?"x":" "}] `:ord?n+". ":"- ";
-          itens.push(recuo+marca+content);
-          [...li.children].filter(c=>/^(UL|OL)$/.test(c.tagName)).forEach(sub=>lista(sub,recuo+" ".repeat(ord?String(n).length+2:2)));
-        });
-      })(el,"");
-      if(itens.length)out.push(itens.join("\n"));
-      return;
-    }
-
-    [...el.childNodes].forEach(block);
-  }
-
-  [...root.childNodes].forEach(block);
-  const body=out.join("\n\n").replace(/\n{3,}/g,"\n\n").trim();
-  const fm=splitFrontmatter(bodyEditor.value).raw;
-  return (fm?fm+(body?"\n":""):"")+(body?body+"\n":"");
-}
+function markdownFromVisual(root){return window.UrbeVisual.markdownFromVisual(root,{frontmatter:splitFrontmatter(bodyEditor.value).raw})}
 
 function bindPreviewWikiLinks(){
   renderedPreview.querySelectorAll("[data-note-name]").forEach(el=>{
@@ -1394,24 +1143,6 @@ document.querySelectorAll(".mdBtn").forEach(btn=>btn.onclick=()=>{
   if(btn.dataset.wrap){insertAtCursor(btn.dataset.wrap,btn.dataset.wrap);return}
   insertAtCursor(btn.dataset.md||"")
 });
-document.getElementById("newFileBtn").onclick=()=>{
-  const sem=semente("novo"+Date.now()),dest=destinoCriacaoExplorer();
-  const r=dest?world.regions.find(x=>x.id===dest)||null:null;
-  const pos=r?vagaNaRegiao(r,sem,new Set()):vagaAleatoria(sem,3,3);
-  if(!pos){toast(r?"Sem lote 3x3 livre nesta pasta/região.":"Não encontrei lote livre próximo; mova a câmera e tente novamente.");return}
-  const b={id:id("b"),kind:"building",regionId:r?r.id:null,x:pos.x,y:pos.y,w:3,h:3,
-    name:"Novo arquivo",description:"",content:"# Novo arquivo\n\n",sprite:"house1",tipo:"nota",tags:[],created:nowDate(),modified:nowDate()};
-  world.buildings.push(b);explorerRegionTarget=r?r.id:null;marcarIndice();indexar();counts();scheduleRoadRebuild();agendarSalvar();
-  openFullEditor(b);fileSidebar.classList.remove("open");toast("Nova nota criada"+(r?" em "+r.name:" na raiz")+".");
-};
-document.getElementById("newFolderBtn").onclick=async()=>{
-  const nome=((await UD.prompt({title:"Nova pasta",label:"Nome da pasta",value:"Nova pasta",confirm:"Criar pasta"}))||"").trim();if(!nome)return;
-  const parentId=destinoCriacaoExplorer(),parent=parentId?world.regions.find(x=>x.id===parentId)||null:null;
-  const r=criarRegiaoOrganica(nome,1,semente(nome+Date.now()),parent?parent.id:null,null,"Pasta criada pelo Explorador.");
-  if(!r){toast(parent?"A pasta selecionada não tem área seca disponível para uma sub-região.":"Não encontrei terra seca para a nova região.");return}
-  explorerRegionTarget=r.id;marcarIndice();indexar();counts();buildTree();agendarSalvar();
-  toast("Pasta \""+nome+"\" criada"+(parent?" dentro de "+parent.name:"")+".");
-};
 document.getElementById("groupFilesBtn").onclick=agruparSelecionados;
 document.getElementById("moveFilesBtn").onclick=()=>escolherDestinoEMover([...explorerSelection]);
 document.getElementById("deleteFilesBtn").onclick=excluirSelecionados;
@@ -1677,7 +1408,6 @@ function baixarBlob(blob,nome){
 }
 
 /* ---------- importação/exportação pelo Explorador ---------- */
-const vaultDlg=document.getElementById("vaultDlg"),vaultMsg=document.getElementById("vaultMsg");
 function nomeRaizEntrada(files){
   for(const f of files){const rel=(f.webkitRelativePath||"").split("/").filter(Boolean);if(rel.length>1)return rel[0]}return "Vault";
 }
@@ -1698,26 +1428,8 @@ document.getElementById("explorerImportFolderBtn").onclick=async()=>{
   if(typeof window.showDirectoryPicker==="function"){try{const h=await window.showDirectoryPicker({mode:"read"});const itens=await listarHandlePasta(h);await importarArquivosUI(itens,true,h.name)}catch(e){if(e?.name!=="AbortError"){console.warn(e);toast("Não consegui abrir a pasta.")}}}
   else document.getElementById("vaultFolderIn").click();
 };
-document.getElementById("explorerImportFilesBtn").onclick=()=>document.getElementById("vaultFilesIn").click();
 document.getElementById("vaultFolderIn").onchange=async e=>{const fs=[...e.target.files],nome=nomeRaizEntrada(fs),prefixo=nome+"/";const entradas=fs.map(f=>({file:f,rel:(f.webkitRelativePath||f.name).startsWith(prefixo)?(f.webkitRelativePath||f.name).slice(prefixo.length):(f.webkitRelativePath||f.name)}));await importarArquivosUI(entradas,true,nome);e.target.value=""};
 document.getElementById("vaultFilesIn").onchange=async e=>{await importarArquivosUI([...e.target.files],false,"Arquivos");e.target.value=""};
-document.getElementById("explorerExportBtn").onclick=exportarVault;
-/* diálogo antigo fica apenas para compatibilidade da importação/exportação JSON */
-document.getElementById("vaultClose").onclick=()=>vaultDlg.style.display="none";
-document.getElementById("vaultExport").onclick=exportarVault;
-document.getElementById("vaultIn").onchange=async e=>{const fs=[...e.target.files];try{const itens=await lerEntrada(fs,{expandZip:fs.length===1&&/\.zip$/i.test(fs[0].name)});const r=importarItens(itens,await resolverDestinoImportacao("Vault",false));toast(`${r.notas} nota(s) · ${r.orfaos} arquivo(s)`) }catch(err){toast("Falhou ao importar: "+err.message)}e.target.value=""};
-document.getElementById("cityExport").onclick=()=>{
-  baixarBlob(new Blob([JSON.stringify(serializarCidade(),null,2)],{type:"application/json"}),"cidade.json");
-};
-document.getElementById("cityIn").onchange=async e=>{
-  try{
-    const d=JSON.parse(await e.target.files[0].text());
-    if(!aplicarCidade(d))throw new Error("arquivo n\u00e3o parece uma cidade");
-    buildTree();salvarCidade();toast("Cidade carregada.");vaultDlg.style.display="none";
-  }catch(err){vaultMsg.textContent="Falhou: "+err.message}
-  e.target.value="";
-};
-
 /* ---------- IA ---------- */
 
 
@@ -2333,9 +2045,6 @@ fileNameDisplay.onblur=()=>finalizarEdicaoNomeEditor(false);
 const _loadFileV19=loadFile;
 loadFile=function(b){if(!b.ext)b.ext='.md';_loadFileV19(b);fileNameDisplay.textContent=nomeCompletoNota(b);document.getElementById('documentWatermark').textContent=nomeCompletoNota(b)};
 
-/* Evita voltar a inserir "# Nome" automaticamente ao criar nota. */
-document.getElementById('newFileBtn').onclick=()=>criarNotaNoDestino(destinoCriacaoExplorer()||null);
-
 /* ---------- diálogo de região sem ghost-click ---------- */
 function protegerDialogRegiao(){
   dlg.classList.add('regionInputGuard');
@@ -2705,9 +2414,6 @@ const _abrirEntradaTreeV20=abrirEntradaTree;abrirEntradaTree=function(e){if(v20E
 /* clicar no vazio apenas muda contexto para raiz; nunca abre painel */
 treeRoot.addEventListener('click',e=>{if(e.target===treeRoot||e.target.classList.contains('treeEmpty')){v20EntrySelection.clear();explorerRegionTarget=null;buildTree()}},true);
 
-/* botão legado de Vault/ZIP fica definitivamente fora da experiência */
-const vd=document.getElementById('vaultDlg');if(vd)vd.remove();
-
 /* ---------- PDF.js local no PWA ---------- */
 obterPdfJs=async function(){if(!pdfJsPromise)pdfJsPromise=import(PDFJS_URL).then(m=>{m.GlobalWorkerOptions.workerSrc=PDFJS_WORKER_URL;return m});return pdfJsPromise};
 
@@ -2997,33 +2703,7 @@ insertAtCursor=function(prefix,suffix){
   return v22Insert(prefix,suffix);
 };
 
-/* ---------- 4. cabeçalho vazio ("# ") ----------
-   renderMarkdown exigia conteúdo depois do #, então o template padrão
-   virava <p># </p> e o primeiro texto digitado saía como "#Texto".
-   Agora "# " vira um <h1> editável e o caminho de volta preserva o "# ". */
-var v22BaseRenderMarkdown=renderMarkdown;
-renderMarkdown=function(md){
-  var linhas=String(md==null?'':md).replace(/\r\n?/g,'\n').split('\n'),emCodigo=false;
-  for(var i=0;i<linhas.length;i++){
-    if(/^```/.test(linhas[i])){emCodigo=!emCodigo;continue}
-    if(emCodigo)continue;
-    var m=linhas[i].match(/^(#{1,6})[ \t]*$/);
-    if(m)linhas[i]=m[1]+' \u0001';
-  }
-  return v22BaseRenderMarkdown(linhas.join('\n')).replace(/\u0001/g,'<br>');
-};
-var v22BaseFromVisual=markdownFromVisual;
-markdownFromVisual=function(root){
-  return v22BaseFromVisual(root).replace(/\u200b/g,'').replace(/^(#{1,6})[ \t]*$/gm,'$1 ');
-};
-
-/* ---------- matemática (src/math) ----------
-   As fórmulas saem do Markdown antes da renderização e voltam como blocos
-   atômicos; no caminho de volta cada uma é reescrita com os delimitadores
-   originais. Tudo o que é específico de matemática vive em src/math. */
-var urbeMathBaseRender=renderMarkdown,urbeMathBaseFromVisual=markdownFromVisual;
-renderMarkdown=function(md){var M=window.UrbeMath;return M?M.renderWith(urbeMathBaseRender,md,{editable:true}):urbeMathBaseRender(md)};
-markdownFromVisual=function(root){var E=window.UrbeMathEditor;return E&&E.serialize?E.serialize(urbeMathBaseFromVisual,root):urbeMathBaseFromVisual(root)};
+/* A volta Visual → Markdown (U+200B, "#" vazio e matemática) vive em src/editor/visual.js (RM-F2-10). */
 
 /* ---------- 5. mapa.json só é gravado quando muda de verdade ----------
    O campo "salvo" trazia a hora atual, então a comparação com o snapshot
@@ -3243,44 +2923,7 @@ routeAStar=function(start,goal){
   return [];
 };
 
-/* ---------- 8. sanitização do Markdown ----------
-   A chave da API fica no IndexedDB desta origem; um .md importado não pode
-   ganhar execução de script por um link javascript: nem por HTML injetado
-   no nome de uma nota. */
-/* A versão anterior gerava <a target="_blank"> e só depois aplicava itálico:
-   com dois links no mesmo parágrafo, o regex de "_" casava de um _blank ao
-   outro e destruía o HTML. Aqui os trechos já convertidos ficam guardados
-   como marcadores até o fim, e as URLs passam por uma checagem de esquema. */
-function v22Enfase(t){
-  return t.replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>')
-          .replace(/__([^_\n]+)__/g,'<strong>$1</strong>')
-          .replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g,'<em>$1</em>')
-          .replace(/(?<!_)_([^_\n]+)_(?!_)/g,'<em>$1</em>')
-          .replace(/~~([^~\n]+)~~/g,'<del>$1</del>');
-}
-function v22Url(u){
-  var t=String(u).replace(/&(?:#\d+|#x[0-9a-fA-F]+|\w+);/g,'').replace(/[\s\u0000-\u001f]/g,'').toLowerCase();
-  if(/^(javascript|vbscript|file):/.test(t))return '#';
-  if(/^data:/.test(t)&&!/^data:image\//.test(t))return '#';
-  return u;
-}
-inlineMarkdown=function(s){
-  var x=escapeHTML(s),guarda=[];
-  var guardar=function(html){guarda.push(html);return '\u0002'+(guarda.length-1)+'\u0002'};
-  x=x.replace(/\[\[([^\]|#]+)(?:\|([^\]]+))?\]\]/g,function(m,alvo,rotulo){
-    var nome=(rotulo||alvo).trim();
-    return guardar('<span class="wikilink" data-note-name="'+escapeHTML(alvo.trim())+'">'+escapeHTML(nome)+'</span>');
-  });
-  x=x.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g,function(m,alt,src){
-    return guardar('<img src="'+v22Url(src)+'" alt="'+alt+'">');
-  });
-  x=x.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g,function(m,txt,href){
-    return guardar('<a href="'+v22Url(href)+'" target="_blank" rel="noopener">'+v22Enfase(txt)+'</a>');
-  });
-  x=x.replace(/`([^`\n]+)`/g,function(m,c){return guardar('<code>'+c+'</code>')});
-  x=v22Enfase(x);
-  return x.replace(/\u0002(\d+)\u0002/g,function(m,i){return guarda[+i]});
-};
+/* ---------- 8. sugestões de wikilink (a sanitização do Markdown agora vive em src/editor/markdown.js) ---------- */
 renderWikiSuggestions=function(){
   if(!wikiState.open){wikiSuggest.classList.remove('open');wikiSuggest.innerHTML='';return}
   wikiSuggest.classList.add('open');
@@ -3944,27 +3587,9 @@ function v25Ciclo(){
 }
 (function(){var scheduler=window.UrbeCore&&window.UrbeCore.service('scheduler');if(scheduler)scheduler.add('aquarium.pedestrians',v25Ciclo,{interval:V25_FPS,whenVisible:true});else v25Relogio=setInterval(v25Ciclo,V25_FPS)})();
 
-/* Gancho de inspeção: tudo do app vive dentro de uma IIFE, o que torna
-   impossível testar de fora. Estes acessos são só de leitura e existem
-   para o harness de verificação — nenhum deles altera estado sozinho. */
-window.URBE=window.URBE||{};
-Object.defineProperties(window.URBE,{
-  povo:{get:function(){return v25Povo},configurable:true},
-  rotas:{get:function(){return v25Rotas},configurable:true},
-  mundo:{get:function(){return world},configurable:true},
-  fauna:{get:function(){return urbeFauna},configurable:true}
-
-});
-Object.assign(window.URBE,{
-  passo:function(dt){v25Passo(dt)},
-  olhar:function(x,y,z){camera.x=(x+.5)*TILE;camera.y=(y+.5)*TILE;if(z)camera.z=z;counts();pedirDesenho()},
-  camera:function(){return{x:camera.x/TILE,y:camera.y/TILE,z:camera.z}},
-  quadro:function(){drawGround();drawRegions();drawRoads();drawTrees();drawBuildings()},
-  naEstrada:function(t){return world.roads.has(K(t.x,t.y))},
-  diagnostico:function(){return {mapaVisivel:v25MapaVisivel(),ligado:v25Ligado,
-    editor:v23Aberto(editorFull),explorador:v23Aberto(fileSidebar),ia:v23Aberto(aiPanel),
-    menu:v23Aberto(menuEl),visibilidade:document.visibilityState,povo:v25Povo.length}}
-});
+/* Diagnóstico (RM-F2-04, L11): o antigo gancho global `URBE` (8 acessos, 7 sem consumidor) saiu. Resta só a leitura do mundo legado,
+   como serviço do core, para os E2E que ainda inspecionam o estado em memória; sai com RM-F2-12 (mundo derivado só da projeção). */
+(function(){var core=window.UrbeCore;if(core)core.provide('diagnostics.world',{legacy:function(){return world}})})();
 
 /* Mudou a geografia ou os links, as rotas guardadas não valem mais. */
 var v25BaseRebuild=rebuildRoadNetwork;
