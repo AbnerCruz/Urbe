@@ -1,3 +1,22 @@
+### 2026-10-03 — codex — UC-3/UC-4 (REQ-007/023/035/038/042)
+- Estado: revisão, Issues #146/#147.
+- Feito: contrato gerado das autoridades de dados, manifesto integral das 12 fixtures e gate contra divergência; inventário de dependências com fontes primárias e riscos por plataforma.
+- Decisões: nenhuma pilha escolhida; vault/formato e runtime preservados (ADR-0016, DEC-0025-C).
+- Pendências: UC-2 parcial, UC-7 crítico, UC-5/6 requerem decisões; C# ainda sem implementação.
+- Próximos passos: UC-2/7 e, depois dos fundamentos, UC-5/6.
+
+### 2026-10-03 — codex — UC-1 / UC-2 (REQ-002/004/007/016/027/037)
+
+## 2026-10-03 — codex — UC-2: vault e restauração
+
+12 fixtures convertidas para casos JSON portáveis e três casos de restauração válida/corrompida/ausente. Adapter calcula saídas do domínio JS em memória; verifica hashes, IDs, proteção forward, recuperação e backup. Baseline congelado preservado. UC-2 (#139) continua parcial; nenhum runtime ou formato alterado.
+
+- Estado: revisão, Issues Ecosystem #138/#139; base 2e4cfa902c86d2eb2441bacfa6b29267f7e46c9e.
+- Feito: matriz dos 101 REQ IMPLEMENTAR com fontes/aceite e inventário de testes/tutorial; oráculo SHA-256 incluindo .urbe; 40 casos Markdown e 110 Visual como JSON portável; protocolo de cliente e runner que recusam resultados incompletos/divergentes; adapter JS calcula Markdown real.
+- Decisões (fonte): DEC-0024-B / ADR-0016 e DEC-0025-C; runtime JS congelado. Sem escolha de pilha, mudança de vault/canal, ou código C# de produto.
+- Pendências: UC-2 não encerrado: converter cenários de vault, adapters e UI; C# não existe e nenhuma paridade em aparelho foi alegada. G-C0 segue não iniciado.
+- Próximos passos: restante de UC-2; UC-3/4/7; propostas UC-5/6 depois da evidência. Handoff: docs/governance/handoffs/HO-20261003-urbe-csharp-parity.json (raiz Ecosystem).
+
 # AGENTSCHAT.md — Log de coordenação entre agentes e proprietário
 
 > Append-only. Mais recente no topo. Leia antes de trabalhar; escreva ao terminar (formato em `AGENTS.md` §7).
