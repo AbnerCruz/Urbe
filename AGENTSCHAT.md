@@ -1,3 +1,31 @@
+### 2026-10-04 — ChatGPT — UC-2 concluído
+
+- FATO OBSERVADO: PR #174 foi integrado automaticamente em `2e088e7` após estado combinado verde; head `b732c957` também passou `urbe-checks` e consistency.
+- Feito: UC-2 encerra M0 de paridade com 297 casos portáveis, os 14 E2E funcionais representados e 11 protocolos físicos Web/Windows/Android explicitamente `not-executed` até as fases de host/validação.
+- Limite preservado: nenhum cliente C# foi iniciado e nenhuma pilha/estratégia de transição foi escolhida implicitamente.
+- Próximo: UC-5 e UC-6 — preparar ADRs e decisões do proprietário para pilha de UI/hosts e transição de canais.
+
+### 2026-10-04 — Codex — UC-2: fixtures no navegador
+
+- FATO OBSERVADO: head 9c4d297 do PR #171 passou consistency/urbe: 260/260 casos e 5/5 E2E. Integrado automaticamente em a8e53ed0.
+- Feito: 11 casos browser.vault derivados das fixtures congeladas, incluindo abertura/salvamento, backup original, sidecars e versões futuras/readonly no app real. Corpus aditivo 293; runtime intocado.
+- Verificação: corpus/oráculo/projeção e testes Node focados verdes; 272/272 no CI (5f38b0b); expansão com 16 browser.storage exige nova rodada.
+- Próximos passos: integrar PR #171, verificar esta fatia e seguir com migração IDB pelo boot, identidade/layout e ZIP. Handoff HO-20261004-urbe-browser-fixtures-parity.
+
+### 2026-10-04 — Codex — UC-2: atualização e cliente unificado
+
+- FATO OBSERVADO: PR #169 integrado; trabalho sobre 093ef4f inclui a versão-ponte #167.
+- Feito: 19 casos portáveis Android/Windows e oito UI, corpus aditivo 260; cliente de referência unificado executa todas as famílias, DOM Visual/UI em Chromium real.
+- Limites: UC-2 segue aberto; nenhuma escolha de UI/host nem código C#. Download local Chromium falhou, casos UI aguardam CI; atualização usa hosts/rede simulados, não valida instalação.
+- Próximos passos: executar CI e corrigir divergências; continuar transcrição UI/E2E e lifecycle. Handoff `HO-20261004-urbe-update-ui-parity`.
+
+### 2026-10-04 — Codex — UC-2: contrato nativo portável
+- Estado: revisão; Issue #139; branch `chatgpt/urbe-uc2-native-parity`.
+- Feito: 24 casos JSON por superfície com bridge/preload/main reais sobre hosts simulados; corpus 233. Capacidades/APIs, vault, bytes, caminhos inválidos, recusas de escrita/exportação, cancelamento, links, impressão, armazenamento/voltar e atualização Android offline.
+- Decisões (fontes): ADR-0016/DEC-0024-B e DEC-0025-C; apenas tooling UC-2, runtime congelado e oráculo intactos.
+- Pendências: UI/E2E portáveis; atualização/lifecycle/permissões reais; C# não iniciado. G-C0 não encerrado. Windows simulado usa filesystem local; não prova Windows instalado; Android simulado não prova aparelho.
+- Próximos passos: continuar UC-2 com UI/E2E e atualização. Handoff `HO-20261004-urbe-native-parity`.
+
 ### 2026-10-03 — ChatGPT — UC-2: crash recovery portável (REQ-007/038/046)
 - Estado: review no PR #165, baseado diretamente em `main` após integração do PR #161; gates finais em execução.
 - Feito: quatro casos `vault.crash-recovery` injetam falha na criação do journal, no segundo arquivo, na remoção de nota e na remoção final do journal. O corpus passa de 205 para 209 casos.
@@ -161,3 +189,10 @@
 - **Pendências / bloqueios:** texto da `LICENSE` (OD-03) bloqueia o gate G4 (RM-F4-12 `[!]`); budgets absolutos de performance dependem do baseline (RM-F5-02); atualização do checklist da issue #33 e criação de PR dependem do proprietário/ferramentas GitHub.
 - **Próximos passos:** proprietário revisa e aprova SPEC/ROADMAP (responder OD-05/10/11/03); depois iniciar F0 (RM-F0-03…18). Nada da 2.0 é implementado antes disso.
 - **Branches:** 31 branches `claude/*` remotas aguardam verificação (RM-F0-16); esta sessão não removeu nenhuma.
+
+### 2026-10-04 — Codex — P4-9 / RM-F4-10 / REQ-006/066/081
+- Estado: verificando correção do PR #167 no estado combinado com main@46c295a.
+- Feito: corrigido parêntese excedente no teste de feed, fixture Android alinhada ao feed direto e revisão explícita de dois hashes do baseline autorizada pela mudança de distribuição.
+- Decisões (com fonte): ADD-0015/DEC-0031/ADR-0019; nenhuma mudança de dados ou de assinatura.
+- Pendências: CI combinado, autorização crítica e chave histórica/release/DEVICE para corte final.
+- Próximos passos: integrador reavalia o PR; P4-9 continua aberto.
