@@ -1,4 +1,4 @@
-# Cliente C# do Urbe — UC-8 a UC-11
+# Cliente C# do Urbe — UC-8 a UC-12
 
 Base de composição aprovada por DEC-0035-A / ADR-0025. O roadmap e os gates
 continuam em [`../docs/csharp/ROADMAP.md`](../docs/csharp/ROADMAP.md).
@@ -98,3 +98,28 @@ UC-11 mantém o boundary do Core: `VaultExportManifest` define o contrato
 `VaultArchive` empacota/inspeciona ZIP com `System.IO.Compression`, exclui journals
 transitórios e rejeita traversal, caminhos absolutos e duplicatas normalizadas.
 Nenhum download, picker, filesystem, localStorage ou host é acessado pelo Core.
+
+
+## UC-12 — documentos, artefatos e conhecimento
+
+UC-12 inicia M2 no `Urbe.Core` sem adicionar superfície de UI. `ArtifactModel`
+é a fonte única C# para classificação de arquivos, editabilidade, linkabilidade e
+nomes seguros. `DocumentStore` mantém documentos imutáveis, identidade, revisão
+e parsing derivado de frontmatter, wikilinks e tags. `KnowledgeIndex` projeta
+links/backlinks, tags, tokens, busca local e estatísticas e se reconstrói nas
+mutações do store.
+
+O domínio pode ser preenchido diretamente por `VaultSnapshot`, preservando os
+IDs já resolvidos pela camada do vault. Mundo/bairros, Markdown Visual,
+páginas/composições, quick-open/UI e integração de hosts permanecem nas UCs
+seguintes.
+
+
+## UC-13 — projeção do mundo e bairros
+
+UC-13 porta para o Core a camada puramente semântica do mundo: `WorldStableIds`
+reproduz os IDs determinísticos `reg_*`/`ast_*` da 1.x e
+`WorldProjection` separa documentos canônicos de posição, sprite e regiões do
+`mapa.json`. Campos desconhecidos são preservados; mapas futuros/corruptos
+ficam somente leitura. Terreno, ruas, vida, AquariumWorld, câmera, desenho e
+interação continuam fora do Core nesta etapa.
