@@ -87,13 +87,20 @@ export async function createBrowserReference(){
           }
           case 'gc': {
             const [decision,old,keep]=args;if(!['cancel','apply'].includes(decision))throw new Error('decisão GC inválida');
+            // A fixture 1.x deve concluir sua primeira gravação/migração antes da ação de manutenção.
+            await a.save();
             const palette=await a.page.evaluate(()=>UrbeCore.commands.list().filter(c=>c.enabled({source:'palette'})).map(c=>c.id));
             await a.page.evaluate(()=>{window.__parityGc=UrbeCore.commands.execute('workspace.cleanOrphans',{source:'palette'})});
             await a.page.waitForSelector('.udlg [data-primary]');const msg=await a.page.textContent('.udlg-msg');
             await a.page.click(decision==='apply'?'.udlg [data-primary]':'.udlg [data-cancel].ui-btn');await a.page.evaluate(()=>window.__parityGc);await a.save();
             value=await a.page.evaluate(([old,keep])=>{const hist=UrbeCore.service('history').export().documents,cmp=UrbeCore.service('compositions').export();return{oldPresent:Object.hasOwn(hist,old),kept:keep.map(id=>Object.hasOwn(hist,id)),sources:cmp.items[0].sources}},[old,keep]);
-            const vault=await a.vault();const maintenance=JSON.parse(vault['.urbe/vault.json']).maintenance||[];
-            value={...value,maintenanceRecorded:maintenance.some(m=>m.kind==='gc'),confirmationExplains:msg.includes('histórico')&&msg.includes('composição'),paletteSafe:palette.includes('workspace.cleanOrphans')&&!palette.includes('workspace.gc')};break;
+            let vault,maintenance=[],maintenanceRecorded=false;
+            for(let i=0;i<30&&!maintenanceRecorded;i++){
+              vault=await a.vault();maintenance=JSON.parse(vault['.urbe/vault.json']).maintenance||[];
+              maintenanceRecorded=maintenance.some(m=>m.kind==='gc');
+              if(!maintenanceRecorded)await a.page.waitForTimeout(100);
+            }
+            value={...value,maintenanceRecorded,confirmationExplains:msg.includes('histórico')&&msg.includes('composição'),paletteSafe:palette.includes('workspace.cleanOrphans')&&!palette.includes('workspace.gc')};break;
           }
           default:throw new Error('ação UI desconhecida');
         }

@@ -1,3 +1,22 @@
+### 2026-10-04 — ChatGPT — UC-5/UC-6 consolidadas e G-C0 aprovado
+
+- DEC-0035-A aplicada: Blazor WebAssembly PWA + .NET MAUI Blazor Hybrid com RCL compartilhada.
+- DEC-0036-C aplicada: reinstalação deliberada com backup/export/import obrigatório; sem ponte de upgrade in-place.
+- ADR-0025/0026 passam a Aceito; UC-5/UC-6 concluídas; G-C0 aprovado.
+- Próxima tarefa autorizada pelo roadmap: UC-8 — esqueleto C# e CI.
+
+### 2026-10-04 — ChatGPT — hardening do aceite GC
+
+- O mesmo head do PR #187 passou 297/297 em `urbe-checks`, mas o estado combinado falhou apenas em `ui-gc-apply`: o sidecar de GC já estava persistido e o `maintenance` de `.urbe/vault.json` ainda não.
+- Corrigido somente o adapter da suíte: ele agora espera de forma limitada o registro realmente aparecer no vault persistido. O critério não foi afrouxado e runtime JS não foi alterado.
+
+### 2026-10-04 — ChatGPT — UC-5/UC-6: propostas para decisão
+
+- UC-5: ADR-0025 + DEC-0035. Recomendação A: Blazor WebAssembly PWA no Web e .NET MAUI Blazor Hybrid em Windows/Android, UI compartilhada em Razor Class Library; Avalonia 12, Uno e UI separada permanecem alternativas reais.
+- Motivo técnico principal: o Urbe é editor-first e mobile-first; DOM/IME/teclado/acessibilidade pesam mais que a elegância de um renderer único. C# total = autoridade de produto em C#, não negar service worker/bootstrap/interoperabilidade inevitáveis do browser.
+- UC-6: ADR-0026 + DEC-0036. Recomendação A: preservar package/assinatura/origem e usar ponte de atualização; separar troca tecnológica da futura migração first-party.
+- Nenhum código C# nem corte foi autorizado. Issues #182/#183 ficam waiting até as escolhas no portal.
+
 ### 2026-10-04 — ChatGPT — UC-2 concluído
 
 - FATO OBSERVADO: PR #174 foi integrado automaticamente em `2e088e7` após estado combinado verde; head `b732c957` também passou `urbe-checks` e consistency.
@@ -196,3 +215,15 @@
 - Decisões (com fonte): ADD-0015/DEC-0031/ADR-0019; nenhuma mudança de dados ou de assinatura.
 - Pendências: CI combinado, autorização crítica e chave histórica/release/DEVICE para corte final.
 - Próximos passos: integrador reavalia o PR; P4-9 continua aberto.
+
+### 2026-10-04 — Codex — UC-8 / REQ-001/008/016/064
+- Estado: base C# verificada localmente na branch feat/urbe-uc8-csharp-foundation; Issue #192; envio remoto bloqueado pela revisão automática.
+- Feito: Core puro, UI Razor compartilhada, Web WASM/PWA e host MAUI Hybrid Windows/Android; soluções portátil/nativa separadas; testes de boundary/composição e smoke Chromium publicado; urbe-checks estendido.
+- Decisões (com fonte): DEC-0035-A/ADR-0025 e DEC-0036-C/ADR-0026, G-C0 integrado no PR #191. Identidade privada de build nativo dev; versão pública continua package.json.
+- Verificação: 8 testes C#, Core/RCL/Web compilados, publish Release e smoke Chromium online/offline em raiz/subpasta, npm check 66/66 e consistency 22/22. MSBuild WASM/ILLink executado in-process por targets temporários externos ao checkout devido ao IPC restrito local.
+- Pendências / bloqueios: revisão automática rejeitou git push por autorização explícita de publicação ausente; sem alternativa indireta. CI/builds nativos e integração crítica por csproj/Platforms/workflow continuam pendentes; nenhuma validação física alegada.
+- Próximos passos: verificar CI e corrigir; após integração UC-8, UC-9 (leitura do vault contra fixtures com proteção forward).
+
+### 2026-10-04 — Codex — UC-8 envio autorizado
+- Estado: proprietário autorizou explicitamente envio da branch e abertura de PR; CI em verificação.
+- Bloqueio anterior de autorização resolvido. Git HTTPS local não tem credencial; envio via conector GitHub.
