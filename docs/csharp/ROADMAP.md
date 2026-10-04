@@ -7,7 +7,7 @@
 
 ## Próxima tarefa
 
-**M1 — Núcleo de dados.** M0 foi concluído: DEC-0035-A definiu Blazor WebAssembly PWA + .NET MAUI Blazor Hybrid/RCL e DEC-0036-C definiu reinstalação deliberada com backup/export/import. G-C0 aprovado. Próxima tarefa: UC-8 — esqueleto do projeto C# e CI.
+**M1 — Núcleo de dados.** M0 foi concluído: DEC-0035-A definiu Blazor WebAssembly PWA + .NET MAUI Blazor Hybrid/RCL e DEC-0036-C definiu reinstalação deliberada com backup/export/import. G-C0 aprovado. Próxima tarefa: UC-12 — documentos, artefatos e índice de conhecimento.
 
 ---
 
@@ -30,13 +30,13 @@ Objetivo: saber exatamente o que é «paridade», ter como provar, e decidir com
 
 Objetivo: o C# lê e escreve o vault exatamente como o JS.
 
-- [~] UC-8 — Esqueleto do projeto C# do Urbe e CI: Core puro, RCL compartilhada, Web WASM/PWA e MAUI Hybrid Windows/Android. `urbe-checks` estendido ao build/testes/publish/smoke e builds nativos no ref combinado. Issue #192; handoff `HO-20261004-urbe-uc8-foundation`. Builds Web/Android/Windows e consistency/self-test passaram no CI; PR #196 em revisão, aguarda CI final do harness E2E e integração crítica; comandos em `../../csharp/README.md`.
-- [ ] UC-9 — Vault: leitura de todos os formatos 1.x/2.x com proteção forward, provada contra as fixtures.
-- [ ] UC-10 — Vault: escrita, backup restaurável, migração idempotente, identidade e GC, provados contra as fixtures.
-- [ ] UC-11 — Exportar/importar ZIP e manifesto.
+- [x] UC-8 — Esqueleto C# e CI integrado pelo PR #196 em 13fc285. Core/RCL/Web, MAUI Hybrid Windows/Android, testes e smoke publicado; CI combinado 37206895634 verde e autorização canônica do proprietário. Issue #192 encerrada; handoff `HO-20261004-urbe-uc8-closeout`.
+- [x] UC-9 — Vault: leitura de todos os formatos 1.x/2.x com proteção forward, provada contra as fixtures. PR #203 integrado em `8aa72c2`; head final com `urbe-checks` 37214179413 e consistency 37214179366 verdes. Issue #199 encerrada `state:done`.
+- [x] UC-10 — Vault: escrita, backup restaurável, migração idempotente, identidade e GC, provados contra as fixtures. PR #209 autorizado pelo proprietário e integrado em `590c9328`; 43/43 testes C# e estado combinado Web/Android/Windows/E2E/checks/consistency verdes. Issue #208 encerrada.
+- [x] UC-11 — Exportar/importar ZIP e manifesto. PR #213 integrado manualmente pelo proprietário em `4b572d4f`; head final posteriormente confirmado com 63/63 testes C#, Web/Android/Windows/E2E/checks e consistency verdes. Issue #212 encerrada.
 
 **Gate G-C1 (crítico: dados do usuário):** leitura e escrita idênticas às do JS em todas as fixtures; autorização do proprietário no PR.
-*Estado do gate:* **não iniciado**
+*Estado do gate:* **aprovado**
 
 ## M2 — Domínio do conhecimento e do mundo
 

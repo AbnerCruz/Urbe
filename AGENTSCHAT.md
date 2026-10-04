@@ -227,3 +227,64 @@
 ### 2026-10-04 — Codex — UC-8 envio autorizado
 - Estado: proprietário autorizou explicitamente envio da branch e abertura de PR; CI em verificação.
 - Bloqueio anterior de autorização resolvido. Git HTTPS local não tem credencial; envio via conector GitHub.
+
+
+### 2026-10-04 — Codex — UC-9 / REQ-007/035/036/037/038/042
+- Estado: implementação do leitor C# em `feat/urbe-uc9-vault-reader`; Issue #199 em `state:working`; CI e integração crítica ainda pendentes.
+- Feito: `Urbe.Core.VaultReader` puro recebe bytes em memória e projeta documentos/mapa/sidecars sem filesystem nem escrita; cobre formatos 1.x/2.x, precedência v2→v1, journal recuperável, IDs/posições conhecidos e proteção forward por artefato/vault.
+- Decisões (com fonte): DATA-CATALOG §9, ADR-0004 e VAULT-CONTRACT; journal válido muda somente o estado efetivo lido e os bytes físicos permanecem intactos; sidecar v2 presente e futuro/corrupto nunca cai para v1; vault futuro torna metadados de sistema protegidos.
+- Verificação: suíte C# adicionada para as 12 fixtures canônicas e negativos de precedência, formato futuro, corrupção, traversal, duplicata e journal. Execução real fica a cargo do CI porque esta sessão não dispõe de SDK .NET local.
+- Pendências / bloqueios: CI do PR; autorização canônica do proprietário para integração, pois UC-9 é crítico por dados do usuário. Nenhuma gravação, migração, backup ou integração aos hosts foi implementada.
+- Próximos passos: abrir PR, corrigir qualquer falha do estado combinado e, só após UC-9 integrado, avançar para UC-10.
+
+
+### 2026-10-04 — Codex — UC-9 verificado
+- Estado: PR #203 no head 5fa0d115; implementação pronta para revisão crítica, sem integração.
+- Verificação: urbe-checks 37213623887 verde em C# portátil (33/33), Android, Windows, E2E e npm checks; consistency 37213623896 verde.
+- Revisão adversarial adicional corrigiu duas divergências antes da integração: IDs não persistidos voltam a ser UUIDs novos por abertura, como no 1.x; decodificação textual segue UTF-8 tolerante do navegador, preservando os bytes físicos originais.
+- Bloqueio único: autorização canônica do proprietário para integrar mudança classificada como user-data. UC-10 não começa antes da integração de UC-9.
+
+
+### 2026-10-04 — ChatGPT — UC-10 / Issue #208 / PR #209
+- Estado: escrita segura do vault em implementação na branch `feat/urbe-uc10-vault-writer`; UC-9 integrada pelo PR #203 e Issue #199 encerrada.
+- Feito: motor puro de mutações, backup restaurável 1→2, migração idempotente, sidecars v2 preservando v1, journal multi-arquivo, vault.json, identidade documental e restauração; GC usa o mesmo escritor, com dry-run/retenção/maintenance.
+- Paridade: fingerprint FNV/normalização/`seen` seguem `identity.js`; ordem e proteção forward seguem `workspace.js`; backup segue `backup.js`; GC segue `gc.js`.
+- Testes: nova suíte cobre fixtures `v1-mapa-v4`, `futuro-v2`, `vault-futuro` e `v1-orfaos`, além de journal e identidade. CI do PR é a autoridade de compilação/regressão.
+- Limites: nenhum adapter Web/MAUI/filesystem conectado; UC-11 (ZIP) não foi antecipada. Integração continua crítica por dados do usuário.
+
+
+### 2026-10-04 — ChatGPT — UC-10 verificada
+- Estado: PR #209 no head `83ed0c77` tecnicamente concluído e movido para review crítico.
+- Evidência: `urbe-checks` 37217933358 verde em checks, C# portátil, MAUI Windows, MAUI Android e E2E; 43/43 `Urbe.Core.Tests` passaram. `consistency` 37217933366 verde.
+- Gate: G-C1 agora está aguardando exclusivamente a integração crítica autorizada do PR #209; nenhuma nova implementação do Core é necessária antes disso.
+- Próximo passo após integração: fechar Issue #208, marcar UC-10 concluída, aprovar G-C1 e iniciar UC-11 (ZIP + manifesto).
+
+
+### 2026-10-04 — ChatGPT — UC-10 integrada / G-C1 aprovado
+- PR #209 autorizado pelo proprietário via label canônica `integrar` e integrado pelo integrador em `590c9328`.
+- O estado combinado testado passou 43/43 testes C#, Web/portable, Android, Windows, E2E, checks e consistency.
+- UC-10 encerrada; G-C1 aprovado. O Core agora possui leitura e escrita do vault com migração/backup/identidade/GC sob o contrato histórico.
+- Próxima tarefa: UC-11 — export/import ZIP + manifesto, ainda sem acoplar filesystem/hosts.
+
+
+### 2026-10-04 — ChatGPT — UC-11 / Issue #212 / PR #213
+- Estado: export/import ZIP + manifesto em implementação na branch `feat/urbe-uc11-export-import`.
+- Feito: `VaultExportManifest` v1 com size/SHA-256, parse current/corrupt/future, verificação de adulterados/faltantes/extras, allowlist de estado portátil e remapeamento de aprovações de plugins; `VaultArchive` usa apenas BCL/System.IO.Compression.
+- Segurança: journals v1/v2 ficam fora do export; `.urbe/**` e binários preservam bytes; import valida caminhos brutos antes de remover prefixo raiz, rejeitando traversal/absolutos/duplicatas case-insensitive; manifesto futuro é recusado e manifesto inválido não ganha autoridade.
+- Verificação parcial: csharp-portable do run 37220350132 compilou Release e passou 61/61 testes, 0 falhas/0 skips; Android também verde. Regressão completa do head ainda em andamento e será repetida após documentação/handoff.
+- Limites: sem filesystem, UI, download, picker ou localStorage no Core; hosts continuam fora do escopo da UC-11.
+
+
+### 2026-10-04 — ChatGPT — UC-11 verificada
+- Estado: PR #213 no head `52a57747` tecnicamente concluído e movido para review crítico.
+- Evidência: `urbe-checks` 37220827485 verde em checks, C# portátil, MAUI Windows, MAUI Android e E2E; 63/63 `Urbe.Core.Tests` passaram, 0 falhas/0 skips. `consistency` 37220827469 verde.
+- Revisão adversarial final: o import preserva `.urbe/` quando ela é a própria raiz do vault e classifica o envelope de manifesto futuro como future antes de interpretar o schema interno, evitando downgrade perigoso para corrupt.
+- Bloqueio único: autorização canônica do proprietário para integrar mudança crítica de dados do usuário.
+- Próximo passo após integração: encerrar Issue #212 e iniciar UC-12 — documentos, artefatos e índice de conhecimento.
+
+
+### 2026-10-04 — ChatGPT — UC-11 integrada / M1 concluído
+- PR #213 integrado manualmente pela conta proprietária `AbnerCruz` em `4b572d4f`.
+- Após o merge, o head final foi reconfirmado: `urbe-checks` 37222912657 e `consistency` 37222912663 verdes; C# portátil, Android, Windows, E2E e checks passaram, com 63/63 testes C#.
+- UC-11 encerrada. M1 — Núcleo de dados — está completo: leitura, escrita, migração/backup/identidade/GC e export/import ZIP estão no Core C#.
+- Próxima tarefa: UC-12 — documentos, artefatos e índice de conhecimento.
